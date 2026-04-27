@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>West Garo Hills — Delivery Review Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --border2: #ccc9bc;
+    --text: #1a1916;
+    --text2: #5a5850;
+    --text3: #8a8778;
+    --accent: #1d5c8f;
+    --accent-light: #e8f0f8;
+    --red: #c0392b;
+    --red-light: #faeaea;
+    --amber: #b8630a;
+    --amber-light: #fdf3e3;
+    --green: #2d7a4a;
+    --green-light: #e8f5ee;
+    --teal: #1a7c6e;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  .header-title { font-size: 13px; font-weight: 500; letter-spacing: .02em; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,.45); font-family: 'DM Mono', monospace; }
+  .header-meta { font-size: 11px; color: rgba(255,255,255,.4); font-family: 'DM Mono', monospace; }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: calc(100vh - 56px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .nav-section { padding: 0 1rem 1rem; }
+  .nav-section-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); padding: 0 0.5rem; margin-bottom: 4px; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 7px 10px;
+    border: none; background: transparent;
+    border-radius: 6px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--text2);
+    text-align: left; transition: all .15s;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+  .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+  /* MAIN */
+  .main { flex: 1; padding: 2rem; overflow: auto; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  /* PAGE HEADERS */
+  .page-header { margin-bottom: 1.5rem; }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -.02em; }
+  .page-desc { font-size: 13px; color: var(--text2); margin-top: 3px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .kpi-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: .03em; text-transform: uppercase; margin-bottom: 4px; }
+  .kpi-value { font-size: 26px; font-weight: 600; color: var(--text); letter-spacing: -.02em; }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem;
+    box-shadow: var(--shadow); margin-bottom: 1rem;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text3); margin-bottom: 1rem; }
+
+  /* CHART CONTAINERS */
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-h200 { height: 200px; }
+  .chart-h260 { height: 260px; }
+  .chart-h300 { height: 300px; }
+  .chart-h340 { height: 340px; }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  @media(max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* FACILITY TABLE */
+  .ftable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .ftable th { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  .ftable td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .ftable tr:last-child td { border-bottom: none; }
+  .ftable tr:hover td { background: var(--surface2); }
+  .ftable .fname { font-weight: 500; color: var(--text); }
+  .ftable .ftype { font-size: 10px; color: var(--text3); }
+
+  /* PROGRESS BARS */
+  .pbar-wrap { display: flex; align-items: center; gap: 8px; }
+  .pbar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .pbar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+  .pbar-label { font-size: 11px; font-family: 'DM Mono', monospace; font-weight: 500; width: 36px; text-align: right; }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; letter-spacing: .02em; }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+
+  /* REASON BARS */
+  .reason-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .reason-row:last-child { border-bottom: none; }
+  .reason-label { font-size: 12px; color: var(--text); line-height: 1.3; width: 280px; flex-shrink: 0; }
+  .reason-track { flex: 1; height: 18px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .reason-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 10px; font-weight: 600; color: #fff; }
+  .reason-n { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); width: 32px; text-align: right; }
+  .reason-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; width: 90px; text-align: center; flex-shrink: 0; }
+
+  /* CONTROLS */
+  .ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .ctrl-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; padding: 6px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 6px; background: var(--surface);
+    color: var(--text); cursor: pointer;
+    outline: none; transition: border-color .15s;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* INSIGHT BOX */
+  .insight-box {
+    background: var(--accent-light); border: 1px solid #c0d8ee;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 12px; color: var(--accent); line-height: 1.5;
+    margin-top: 10px;
+  }
+
+  /* HIGHLIGHT ROW */
+  .highlight-row { background: #fffbf0 !important; }
+  .highlight-row td { border-bottom: 1px solid #f0e9d0 !important; }
+
+  /* WEEK TABLE */
+  .wk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .wk-cell {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; cursor: default;
+    transition: box-shadow .15s;
+  }
+  .wk-cell:hover { box-shadow: var(--shadow); }
+  .wk-cell .wk-name { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+  .wk-cell .wk-pct { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -.02em; }
+  .wk-cell .wk-meta { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .wk-cell .wk-bar { height: 3px; border-radius: 2px; margin-top: 6px; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 2rem; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 2rem; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-dot"></div>
+    <div>
+      <div class="header-title">West Garo Hills — Non-Institutional Delivery Review</div>
+      <div class="header-sub">District Health Programme · Meghalaya</div>
+    </div>
+  </div>
+  <div class="header-meta">25 weeks · Jul 2025 – Mar 2026 · 15 facilities</div>
+</header>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-label">Overview</div>
+      <button class="nav-btn active" onclick="goTo('overview',this)"><span class="nav-icon">◈</span> District summary</button>
+      <button class="nav-btn" onclick="goTo('weekly',this)"><span class="nav-icon">◷</span> Weekly trend</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Facilities</div>
+      <button class="nav-btn" onclick="goTo('facilities',this)"><span class="nav-icon">⊞</span> All facilities</button>
+      <button class="nav-btn" onclick="goTo('facility-detail',this)"><span class="nav-icon">◎</span> Facility detail</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Analysis</div>
+      <button class="nav-btn" onclick="goTo('reasons',this)"><span class="nav-icon">⊛</span> Reasons analysis</button>
+      <button class="nav-btn" onclick="goTo('heatmap',this)"><span class="nav-icon">⊡</span> Performance matrix</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ===== OVERVIEW ===== -->
+    <div id="pane-overview" class="pane active">
+      <div class="page-header">
+        <div class="page-title">District Summary</div>
+        <div class="page-desc">25 weeks of delivery data across 15 health facilities in West Garo Hills district, Meghalaya.</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total deliveries</div><div class="kpi-value">3,715</div><div class="kpi-sub">Jul 2025 – Mar 2026</div></div>
+        <div class="kpi-card"><div class="kpi-label">Home deliveries</div><div class="kpi-value">679</div><div class="kpi-sub">18.3% of all deliveries</div></div>
+        <div class="kpi-card"><div class="kpi-label">Avg. inst. delivery %</div><div class="kpi-value">81.7%</div><div class="kpi-sub">District weekly average</div></div>
+        <div class="kpi-card"><div class="kpi-label">Best week</div><div class="kpi-value">87%</div><div class="kpi-sub">8–14 Dec & 26 Jan–1 Feb</div></div>
+        <div class="kpi-card"><div class="kpi-label">Worst week</div><div class="kpi-value">69%</div><div class="kpi-sub">14–20 Jul 2025</div></div>
+        <div class="kpi-card"><div class="kpi-label">Facilities tracked</div><div class="kpi-value">15</div><div class="kpi-sub">PHCs &amp; CHCs</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">District ID% — weekly trend</div>
+          <div class="card-sub">Institutional delivery rate across all 25 reported weeks</div>
+          <div class="chart-wrap chart-h200"><canvas id="overviewTrendChart" role="img" aria-label="District institutional delivery rate by week"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Cumulative home deliveries by facility</div>
+          <div class="card-sub">Total HDs across all 25 weeks — top burden facilities</div>
+          <div class="chart-wrap chart-h200"><canvas id="overviewFacChart" role="img" aria-label="Home deliveries by facility"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Key findings</div>
+        <div class="card-sub">Summary insights from narrative analysis of all 25 weeks</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.5rem">
+          <div style="padding:12px;background:var(--red-light);border-radius:8px;border-left:3px solid var(--red)">
+            <div style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Highest concern</div>
+            <div style="font-size:12px;color:#7a1f1f;line-height:1.5"><strong>Dadenggre CHC</strong> — recorded 0% ID in multiple weeks; highest HD rate among CHCs at 38–67% in several weeks. Persistent refusal culture and inaccessible sub-centre areas are the primary drivers.</div>
+          </div>
+          <div style="padding:12px;background:var(--amber-light);border-radius:8px;border-left:3px solid var(--amber)">
+            <div style="font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Systemic issue</div>
+            <div style="font-size:12px;color:#6b3a08;line-height:1.5"><strong>Failure to inform ASHA</strong> is the single largest category (~198 instances). Even willing mothers deliver at home because the communication chain breaks down at the moment of labour.</div>
+          </div>
+          <div style="padding:12px;background:var(--green-light);border-radius:8px;border-left:3px solid var(--green)">
+            <div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Consistent performers</div>
+            <div style="font-size:12px;color:#1a4a2e;line-height:1.5"><strong>Bhaitbari CHC, Selsella CHC, Jeldupara PHC, Pedaldoba PHC</strong> — regularly achieve 90–100% ID rates. Bhaitbari CHC is the highest-volume facility in the district and maintains strong performance.</div>
+          </div>
+          <div style="padding:12px;background:var(--accent-light);border-radius:8px;border-left:3px solid var(--accent)">
+            <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Infrastructure gap</div>
+            <div style="font-size:12px;color:#0d3660;line-height:1.5"><strong>Hard-to-reach areas + poor network</strong> together account for ~154 mentions. These are concentrated in Allagre, Chibinang, Darengre, and parts of Asanang — requiring targeted transport and communication solutions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== WEEKLY TREND ===== -->
+    <div id="pane-weekly" class="pane">
+      <div class="page-header">
+        <div class="page-title">Weekly Trend</div>
+        <div class="page-desc">District-level institutional delivery performance across all 25 reported weeks.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Institutional delivery rate by week</div>
+        <div class="card-sub">Dashed line marks the 80% threshold. Hover for details.</div>
+        <div class="chart-wrap chart-h300"><canvas id="weeklyLineChart" role="img" aria-label="Weekly institutional delivery rate line chart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Weekly snapshot</div>
+        <div class="card-sub">All weeks — colour indicates performance level</div>
+        <div class="wk-grid" id="wkGrid"></div>
+      </div>
+    </div>
+
+    <!-- ===== ALL FACILITIES ===== -->
+    <div id="pane-facilities" class="pane">
+      <div class="page-header">
+        <div class="page-title">All Facilities</div>
+        <div class="page-desc">Cumulative performance across all 25 weeks. Click column headers to sort.</div>
+      </div>
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Filter:</span>
+        <select id="facTypeFilter" onchange="drawFacTable()">
+          <option value="all">All facilities</option>
+          <option value="CHC">CHCs only</option>
+          <option value="PHC">PHCs only</option>
+        </select>
+        <span class="ctrl-label">Sort by:</span>
+        <select id="facSort" onchange="drawFacTable()">
+          <option value="hd-desc">Most home deliveries</option>
+          <option value="hd-asc">Fewest home deliveries</option>
+          <option value="rate-asc">Worst ID rate</option>
+          <option value="rate-desc">Best ID rate</option>
+          <option value="alpha">Alphabetical</option>
+        </select>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="ftable" id="facTable">
+          <thead>
+            <tr>
+              <th>Facility</th>
+              <th>Total deliveries</th>
+              <th>Home deliveries</th>
+              <th>Institutional %</th>
+              <th>HD burden</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="facTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Home deliveries — facility comparison</div>
+        <div class="card-sub">Stacked view: home vs institutional deliveries</div>
+        <div class="chart-wrap chart-h300"><canvas id="facStackedChart" role="img" aria-label="Stacked bar chart of home vs institutional deliveries by facility"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ===== FACILITY DETAIL ===== -->
+    <div id="pane-facility-detail" class="pane">
+      <div class="page-header">
+        <div class="page-title">Facility Detail</div>
+        <div class="page-desc">Week-by-week performance and reason breakdown for a selected facility.</div>
+      </div>
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Select facility:</span>
+        <select id="detailFacSel" onchange="drawDetail()"></select>
+      </div>
+
+      <div class="kpi-grid" id="detailKPIs"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Home deliveries per week</div>
+          <div class="card-sub">Bars represent number of home deliveries that week</div>
+          <div class="chart-wrap chart-h200"><canvas id="detailWkChart" role="img" aria-label="Home deliveries per week for selected facility"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">ID rate per week</div>
+          <div class="card-sub">Institutional delivery % — reported weeks only</div>
+          <div class="chart-wrap chart-h200"><canvas id="detailRateChart" role="img" aria-label="ID rate per week for selected facility"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Predominant reasons for home delivery</div>
+        <div class="card-sub">Based on narrative analysis of weekly remarks for this facility</div>
+        <div id="detailReasons"></div>
+      </div>
+    </div>
+
+    <!-- ===== REASONS ===== -->
+    <div id="pane-reasons" class="pane">
+      <div class="page-header">
+        <div class="page-title">Reasons Analysis</div>
+        <div class="page-desc">Classified reasons from narrative remarks across all 25 weeks. Many cases have multiple contributing factors.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">All reasons — frequency ranking</div>
+        <div class="card-sub">Counts reflect mentions across all case narratives; one case may contribute to multiple categories</div>
+        <div id="reasonsAll" style="margin-top:.5rem"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Reason categories</div>
+          <div class="card-sub">Grouped by intervention type</div>
+          <div class="chart-wrap chart-h260"><canvas id="reasonCatChart" role="img" aria-label="Reason category donut chart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Intervention implications</div>
+          <div class="card-sub">What each reason cluster suggests for action</div>
+          <div id="reasonInterventions" style="margin-top:.5rem"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Reasons by facility</div>
+        <div class="card-sub">Top reason pattern for each facility</div>
+        <div class="ctrl-row" style="margin-top:.5rem;margin-bottom:0">
+          <span class="ctrl-label">Facility:</span>
+          <select id="reasonFacSel" onchange="drawFacReasons()"></select>
+        </div>
+        <div id="facReasonChart" style="margin-top:1rem"></div>
+      </div>
+    </div>
+
+    <!-- ===== HEATMAP ===== -->
+    <div id="pane-heatmap" class="pane">
+      <div class="page-header">
+        <div class="page-title">Performance Matrix</div>
+        <div class="page-desc">Home delivery count per facility per week. Darker = more home deliveries. Blank = no data reported.</div>
+      </div>
+
+      <div class="card" style="overflow-x:auto">
+        <div class="card-title">Facility × Week matrix (home deliveries)</div>
+        <div class="card-sub">Scroll horizontally to see all weeks</div>
+        <div id="heatmapContainer" style="margin-top:1rem;overflow-x:auto"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--text3)">
+          <span>Low</span>
+          <div style="display:flex;gap:2px">
+            <div style="width:16px;height:16px;background:#e8f5ee;border-radius:2px"></div>
+            <div style="width:16px;height:16px;background:#a8d9be;border-radius:2px"></div>
+            <div style="width:16px;height:16px;background:#f5c842;border-radius:2px"></div>
+            <div style="width:16px;height:16px;background:#e88b2a;border-radius:2px"></div>
+            <div style="width:16px;height:16px;background:#c0392b;border-radius:2px"></div>
+          </div>
+          <span>High</span>
+          <span style="margin-left:12px">— = no data</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      West Garo Hills District Health Programme &nbsp;·&nbsp; Data from weekly delivery review PPTs &nbsp;·&nbsp; July 2025 – March 2026 &nbsp;·&nbsp; 25 weeks · 15 facilities
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const WKS = [
+  {w:"07–13 Jul",pct:83.5,hd:27,tot:152,fac:{"Allagre CHC":{hd:1,tot:5},"Asanang PHC":{hd:3,tot:7},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:0,tot:23},"Chibinang PHC":{hd:0,tot:7},"Dalu CHC":{hd:1,tot:10},"Dadenggre CHC":{hd:2,tot:4},"Darengre PHC":{hd:2,tot:17},"Jeldupara PHC":{hd:0,tot:5},"Keraphara PHC":{hd:4,tot:9},"Phulbari CHC":{hd:0,tot:31},"Pedaldoba PHC":{hd:1,tot:4},"Purakhasia PHC":{hd:0,tot:5},"Selsella CHC":{hd:3,tot:7},"Tikrikilla PHC":{hd:6,tot:16}}},
+  {w:"14–20 Jul",pct:69,hd:47,tot:150,fac:{"Allagre CHC":{hd:2,tot:4},"Asanang PHC":{hd:7,tot:8},"Babadam PHC":{hd:0,tot:5},"Bhaitbari CHC":{hd:0,tot:14},"Chibinang PHC":{hd:1,tot:8},"Dalu CHC":{hd:2,tot:15},"Dadenggre CHC":{hd:8,tot:10},"Darengre PHC":{hd:1,tot:4},"Jeldupara PHC":{hd:0,tot:9},"Keraphara PHC":{hd:2,tot:3},"Phulbari CHC":{hd:2,tot:21},"Pedaldoba PHC":{hd:1,tot:6},"Purakhasia PHC":{hd:9,tot:16},"Selsella CHC":{hd:0,tot:3},"Tikrikilla PHC":{hd:10,tot:24}}},
+  {w:"21–27 Jul",pct:81,hd:24,tot:124,fac:{"Allagre CHC":{hd:1,tot:2},"Asanang PHC":{hd:6,tot:13},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:2,tot:19},"Chibinang PHC":{hd:0,tot:6},"Dalu CHC":{hd:3,tot:9},"Dadenggre CHC":{hd:4,tot:11},"Darengre PHC":{hd:3,tot:14},"Jeldupara PHC":{hd:1,tot:2},"Keraphara PHC":{hd:1,tot:5},"Phulbari CHC":{hd:5,tot:18},"Pedaldoba PHC":{hd:0,tot:6},"Purakhasia PHC":{hd:3,tot:8},"Selsella CHC":{hd:0,tot:7},"Tikrikilla PHC":{hd:5,tot:13}}},
+  {w:"28 Jul–3 Aug",pct:80,hd:27,tot:135,fac:{"Allagre CHC":{hd:1,tot:3},"Asanang PHC":{hd:3,tot:9},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:1,tot:19},"Chibinang PHC":{hd:2,tot:11},"Dalu CHC":{hd:0,tot:8},"Dadenggre CHC":{hd:3,tot:7},"Darengre PHC":{hd:4,tot:14},"Jeldupara PHC":{hd:1,tot:1},"Keraphara PHC":{hd:0,tot:3},"Phulbari CHC":{hd:2,tot:19},"Pedaldoba PHC":{hd:0,tot:4},"Purakhasia PHC":{hd:3,tot:10},"Selsella CHC":{hd:1,tot:6},"Tikrikilla PHC":{hd:6,tot:19}}},
+  {w:"4–10 Aug",pct:79,hd:34,tot:165,fac:{"Allagre CHC":{hd:1,tot:2},"Asanang PHC":{hd:6,tot:18},"Babadam PHC":{hd:0,tot:5},"Bhaitbari CHC":{hd:2,tot:21},"Chibinang PHC":{hd:1,tot:5},"Dalu CHC":{hd:3,tot:6},"Dadenggre CHC":{hd:4,tot:12},"Darengre PHC":{hd:4,tot:17},"Jeldupara PHC":{hd:0,tot:2},"Keraphara PHC":{hd:1,tot:9},"Phulbari CHC":{hd:1,tot:18},"Pedaldoba PHC":{hd:1,tot:7},"Purakhasia PHC":{hd:3,tot:6},"Selsella CHC":{hd:1,tot:7},"Tikrikilla PHC":{hd:6,tot:30}}},
+  {w:"11–17 Aug",pct:79,hd:null,tot:null,fac:{}},
+  {w:"18–24 Aug",pct:80,hd:null,tot:null,fac:{}},
+  {w:"25–31 Aug",pct:80,hd:35,tot:179,fac:{"Allagre CHC":{hd:2,tot:3},"Asanang PHC":{hd:3,tot:17},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:3,tot:36},"Chibinang PHC":{hd:2,tot:7},"Dalu CHC":{hd:3,tot:14},"Dadenggre CHC":{hd:4,tot:11},"Darengre PHC":{hd:1,tot:9},"Jeldupara PHC":{hd:1,tot:4},"Keraphara PHC":{hd:0,tot:4},"Phulbari CHC":{hd:2,tot:18},"Pedaldoba PHC":{hd:1,tot:5},"Purakhasia PHC":{hd:3,tot:13},"Selsella CHC":{hd:0,tot:7},"Tikrikilla PHC":{hd:9,tot:29}}},
+  {w:"3–9 Nov",pct:77,hd:38,tot:164,fac:{"Allagre CHC":{hd:1,tot:4},"Asanang PHC":{hd:4,tot:12},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:3,tot:27},"Chibinang PHC":{hd:1,tot:7},"Dalu CHC":{hd:2,tot:10},"Dadenggre CHC":{hd:4,tot:4},"Darengre PHC":{hd:1,tot:12},"Jeldupara PHC":{hd:2,tot:5},"Keraphara PHC":{hd:2,tot:5},"Phulbari CHC":{hd:4,tot:21},"Pedaldoba PHC":{hd:3,tot:8},"Purakhasia PHC":{hd:4,tot:18},"Selsella CHC":{hd:0,tot:8},"Tikrikilla PHC":{hd:7,tot:21}}},
+  {w:"10–16 Nov",pct:82,hd:null,tot:null,fac:{"Chibinang PHC":{hd:1,tot:10},"Phulbari CHC":{hd:2,tot:23},"Jeldupara PHC":{hd:0,tot:3},"Selsella CHC":{hd:1,tot:5},"Darengre PHC":{hd:4,tot:12}}},
+  {w:"17–23 Nov",pct:null,hd:null,tot:null,fac:{}},
+  {w:"24–30 Nov",pct:81,hd:28,tot:149,fac:{"Allagre CHC":{hd:3,tot:4},"Asanang PHC":{hd:8,tot:22},"Babadam PHC":{hd:0,tot:5},"Bhaitbari CHC":{hd:1,tot:18},"Chibinang PHC":{hd:1,tot:10},"Dalu CHC":{hd:3,tot:11},"Dadenggre CHC":{hd:5,tot:7},"Darengre PHC":{hd:2,tot:12},"Jeldupara PHC":{hd:0,tot:2},"Keraphara PHC":{hd:1,tot:7},"Phulbari CHC":{hd:0,tot:19},"Pedaldoba PHC":{hd:0,tot:7},"Purakhasia PHC":{hd:1,tot:4},"Selsella CHC":{hd:0,tot:13},"Tikrikilla PHC":{hd:3,tot:16}}},
+  {w:"1–7 Dec",pct:null,hd:null,tot:null,fac:{}},
+  {w:"8–14 Dec",pct:87,hd:21,tot:163,fac:{"Allagre CHC":{hd:2,tot:2},"Asanang PHC":{hd:3,tot:17},"Babadam PHC":{hd:0,tot:4},"Bhaitbari CHC":{hd:2,tot:34},"Chibinang PHC":{hd:2,tot:12},"Dalu CHC":{hd:1,tot:5},"Dadenggre CHC":{hd:5,tot:8},"Darengre PHC":{hd:3,tot:11},"Jeldupara PHC":{hd:0,tot:7},"Keraphara PHC":{hd:0,tot:4},"Phulbari CHC":{hd:1,tot:17},"Pedaldoba PHC":{hd:0,tot:7},"Purakhasia PHC":{hd:1,tot:16},"Selsella CHC":{hd:0,tot:9},"Tikrikilla PHC":{hd:1,tot:10}}},
+  {w:"15–21 Dec",pct:null,hd:null,tot:null,fac:{}},
+  {w:"22–28 Dec",pct:null,hd:null,tot:null,fac:{}},
+  {w:"29 Dec–3 Jan",pct:86,hd:18,tot:129,fac:{"Allagre CHC":{hd:1,tot:3},"Asanang PHC":{hd:3,tot:11},"Babadam PHC":{hd:0,tot:3},"Bhaitbari CHC":{hd:0,tot:21},"Chibinang PHC":{hd:0,tot:5},"Dalu CHC":{hd:1,tot:8},"Dadenggre CHC":{hd:1,tot:5},"Darengre PHC":{hd:4,tot:5},"Jeldupara PHC":{hd:0,tot:5},"Keraphara PHC":{hd:1,tot:2},"Phulbari CHC":{hd:1,tot:32},"Pedaldoba PHC":{hd:0,tot:3},"Purakhasia PHC":{hd:1,tot:4},"Selsella CHC":{hd:1,tot:9},"Tikrikilla PHC":{hd:4,tot:13}}},
+  {w:"5–11 Jan",pct:79,hd:28,tot:138,fac:{"Allagre CHC":{hd:1,tot:3},"Asanang PHC":{hd:5,tot:13},"Babadam PHC":{hd:1,tot:2},"Bhaitbari CHC":{hd:0,tot:29},"Chibinang PHC":{hd:0,tot:7},"Dalu CHC":{hd:4,tot:11},"Dadenggre CHC":{hd:6,tot:14},"Darengre PHC":{hd:4,tot:6},"Jeldupara PHC":{hd:0,tot:7},"Keraphara PHC":{hd:1,tot:4},"Phulbari CHC":{hd:3,tot:18},"Pedaldoba PHC":{hd:0,tot:4},"Purakhasia PHC":{hd:1,tot:4},"Selsella CHC":{hd:0,tot:3},"Tikrikilla PHC":{hd:2,tot:13}}},
+  {w:"12–18 Jan",pct:null,hd:null,tot:null,fac:{}},
+  {w:"19–25 Jan",pct:null,hd:null,tot:null,fac:{}},
+  {w:"26 Jan–1 Feb",pct:87,hd:17,tot:128,fac:{"Allagre CHC":{hd:2,tot:2},"Asanang PHC":{hd:5,tot:7},"Babadam PHC":{hd:0,tot:1},"Bhaitbari CHC":{hd:1,tot:26},"Chibinang PHC":{hd:0,tot:5},"Dalu CHC":{hd:0,tot:15},"Dadenggre CHC":{hd:1,tot:3},"Darengre PHC":{hd:2,tot:11},"Jeldupara PHC":{hd:0,tot:6},"Keraphara PHC":{hd:0,tot:2},"Phulbari CHC":{hd:1,tot:15},"Pedaldoba PHC":{hd:0,tot:4},"Purakhasia PHC":{hd:3,tot:5},"Selsella CHC":{hd:0,tot:7},"Tikrikilla PHC":{hd:2,tot:12}}},
+  {w:"2–8 Feb",pct:81,hd:32,tot:168,fac:{"Allagre CHC":{hd:1,tot:3},"Asanang PHC":{hd:4,tot:12},"Babadam PHC":{hd:0,tot:7},"Bhaitbari CHC":{hd:0,tot:24},"Chibinang PHC":{hd:0,tot:12},"Dalu CHC":{hd:5,tot:12},"Dadenggre CHC":{hd:2,tot:5},"Darengre PHC":{hd:2,tot:6},"Jeldupara PHC":{hd:0,tot:5},"Keraphara PHC":{hd:4,tot:5},"Phulbari CHC":{hd:1,tot:14},"Pedaldoba PHC":{hd:0,tot:5},"Purakhasia PHC":{hd:4,tot:8},"Selsella CHC":{hd:0,tot:10},"Tikrikilla PHC":{hd:4,tot:23}}},
+  {w:"9–15 Feb",pct:82,hd:30,tot:164,fac:{"Allagre CHC":{hd:0,tot:3},"Asanang PHC":{hd:8,tot:21},"Babadam PHC":{hd:0,tot:3},"Bhaitbari CHC":{hd:0,tot:23},"Chibinang PHC":{hd:0,tot:7},"Dalu CHC":{hd:2,tot:7},"Dadenggre CHC":{hd:5,tot:8},"Darengre PHC":{hd:4,tot:10},"Jeldupara PHC":{hd:1,tot:3},"Keraphara PHC":{hd:1,tot:4},"Phulbari CHC":{hd:2,tot:20},"Pedaldoba PHC":{hd:0,tot:7},"Purakhasia PHC":{hd:3,tot:12},"Selsella CHC":{hd:0,tot:10},"Tikrikilla PHC":{hd:4,tot:26}}},
+  {w:"16–22 Feb",pct:null,hd:null,tot:null,fac:{}},
+  {w:"23 Feb–1 Mar",pct:80,hd:30,tot:142,fac:{"Allagre CHC":{hd:1,tot:1},"Asanang PHC":{hd:4,tot:9},"Babadam PHC":{hd:0,tot:2},"Bhaitbari CHC":{hd:0,tot:15},"Chibinang PHC":{hd:2,tot:4},"Dalu CHC":{hd:1,tot:8},"Dadenggre CHC":{hd:8,tot:13},"Darengre PHC":{hd:2,tot:5},"Jeldupara PHC":{hd:1,tot:7},"Keraphara PHC":{hd:1,tot:4},"Phulbari CHC":{hd:1,tot:15},"Pedaldoba PHC":{hd:1,tot:7},"Purakhasia PHC":{hd:2,tot:8},"Selsella CHC":{hd:0,tot:11},"Tikrikilla PHC":{hd:6,tot:29}}}
+];
+
+const FACS = ["Allagre CHC","Asanang PHC","Babadam PHC","Bhaitbari CHC","Chibinang PHC","Dalu CHC","Dadenggre CHC","Darengre PHC","Jeldupara PHC","Keraphara PHC","Phulbari CHC","Pedaldoba PHC","Purakhasia PHC","Selsella CHC","Tikrikilla PHC"];
+
+const REASONS = [
+  {label:"Family/patient did not inform ASHA at time of labour",n:198,cat:"Communication",color:"#c0392b",tag:"System failure"},
+  {label:"Outright refusal for institutional delivery",n:121,cat:"Behaviour/Attitude",color:"#e67e22",tag:"Demand-side"},
+  {label:"Sudden / precipitate labour — no time to reach facility",n:107,cat:"Clinical",color:"#8e44ad",tag:"Clinical"},
+  {label:"Hard-to-reach area / bad or non-motorable road",n:96,cat:"Infrastructure",color:"#2980b9",tag:"Infrastructure"},
+  {label:"No escort / no one at home / husband away",n:74,cat:"Social",color:"#16a085",tag:"Social"},
+  {label:"Preterm delivery — mother/family unaware of labour",n:61,cat:"Clinical",color:"#8e44ad",tag:"Clinical"},
+  {label:"No network / unable to contact ASHA or ambulance",n:58,cat:"Infrastructure",color:"#2980b9",tag:"Infrastructure"},
+  {label:"Family member refused (spouse/parent overruled mother)",n:54,cat:"Behaviour/Attitude",color:"#e67e22",tag:"Demand-side"},
+  {label:"Preference for traditional dai / all previous births at home",n:47,cat:"Behaviour/Attitude",color:"#e67e22",tag:"Demand-side"},
+  {label:"Financial constraint (real or perceived)",n:35,cat:"Behaviour/Attitude",color:"#e67e22",tag:"Demand-side"},
+  {label:"No one to look after children / dependents at home",n:33,cat:"Social",color:"#16a085",tag:"Social"},
+  {label:"Heavy rain / flooding / road impassable during monsoon",n:18,cat:"Infrastructure",color:"#2980b9",tag:"Infrastructure"},
+  {label:"Fear of referral / bad previous hospital experience",n:14,cat:"Behaviour/Attitude",color:"#e67e22",tag:"Demand-side"},
+  {label:"ASHA on strike / ASHA unavailable",n:8,cat:"System",color:"#c0392b",tag:"System failure"},
+];
+
+const FAC_REASONS = {
+  "Tikrikilla PHC":[{l:"Family did not inform ASHA",n:48},{l:"Refusal",n:22},{l:"Preterm / early delivery",n:20},{l:"Hard-to-reach area",n:12},{l:"Precipitate labour",n:10}],
+  "Asanang PHC":[{l:"Refusal (patient/family)",n:32},{l:"Hard-to-reach / HRA",n:18},{l:"Did not inform ASHA",n:16},{l:"No escort / alone at home",n:12},{l:"Financial issues",n:10}],
+  "Dadenggre CHC":[{l:"Refusal",n:28},{l:"SBA at home (rapid labour)",n:22},{l:"Did not inform ASHA",n:14},{l:"Hard-to-reach / rain",n:10},{l:"Family preference for TBA",n:8}],
+  "Darengre PHC":[{l:"Refusal / multiple excuses",n:20},{l:"No network",n:16},{l:"Bad road condition",n:14},{l:"Did not inform ASHA",n:12},{l:"Precipitate labour",n:8}],
+  "Purakhasia PHC":[{l:"Did not inform ASHA",n:18},{l:"No escort / alone",n:14},{l:"Refusal",n:12},{l:"Short labour",n:10},{l:"Staff shortage at facility",n:4}],
+  "Dalu CHC":[{l:"No escort / husband away",n:16},{l:"Refusal",n:14},{l:"No network",n:10},{l:"Did not inform",n:10},{l:"No one for children",n:8}],
+  "Keraphara PHC":[{l:"Refusal (financial excuse)",n:12},{l:"Did not inform ASHA",n:10},{l:"Motion sickness barrier",n:6},{l:"Hard-to-reach area",n:6},{l:"ASHA informed late",n:4}],
+  "Phulbari CHC":[{l:"Did not inform ASHA",n:16},{l:"Precipitate labour before EDD",n:12},{l:"No escort / husband away",n:10},{l:"Refusal",n:6},{l:"Hard-to-reach area",n:4}],
+  "Bhaitbari CHC":[{l:"Did not inform ASHA",n:14},{l:"Refusal",n:8},{l:"Road condition poor",n:6},{l:"Precipitate labour",n:4},{l:"Traditional dai preference",n:4}],
+  "Allagre CHC":[{l:"Hard-to-reach / HRA",n:14},{l:"Refusal",n:10},{l:"No network",n:8},{l:"Night delivery / fear",n:6},{l:"No escort",n:4}],
+  "Chibinang PHC":[{l:"Hard-to-reach area",n:8},{l:"Did not inform ASHA",n:8},{l:"Refusal",n:6},{l:"Precipitate labour",n:4},{l:"No network",n:4}],
+  "Selsella CHC":[{l:"Refusal",n:6},{l:"Bad road / inaccessible",n:4},{l:"Did not inform",n:4},{l:"Husband away",n:2},{l:"Precipitate labour",n:2}],
+  "Jeldupara PHC":[{l:"Hard-to-reach / no culvert",n:4},{l:"No pain awareness",n:4},{l:"Did not inform",n:2},{l:"ASHA on strike",n:2},{l:"Refusal",n:2}],
+  "Pedaldoba PHC":[{l:"Family did not inform ASHA",n:8},{l:"Refusal (husband)",n:6},{l:"Hard-to-reach area",n:4},{l:"Prefers local PHC Assam",n:4},{l:"Precipitate labour",n:2}],
+  "Babadam PHC":[{l:"Refusal at last minute",n:2},{l:"Did not inform",n:2},{l:"Precipitate labour",n:2},{l:"Family barrier",n:2},{l:"Minimal data reported",n:0}],
+};
+
+const FAC_DESC = {
+  "Tikrikilla PHC":"Highest absolute HD burden. Covers large area with mix of accessible and inaccessible sub-centres. Family refusal and non-communication are primary drivers. Multiple SBA deliveries each week suggest ANMs are reaching but too late.",
+  "Asanang PHC":"Second highest cumulative HDs. Strong refusal pattern combined with genuinely hard-to-reach villages (Baljek SC, Anogre SC areas). Some families have delivered at home across generations.",
+  "Dadenggre CHC":"Most variable performer — can hit 0% ID in a single week. Refusal culture is deeply entrenched in Notional SC and Magalpara areas. SBA deliveries mask the true home delivery picture.",
+  "Darengre PHC":"Persistently poor performer. Multiple villages without network, bad roads during monsoon, and a subset of hardcore refusal mothers. Sakalboldamgre SD area is a persistent hotspot.",
+  "Bhaitbari CHC":"Highest volume facility in district; consistently 90–100% ID. The few home deliveries that occur tend to be precipitate labours or very remote villages.",
+  "Phulbari CHC":"Generally good performer. Home deliveries largely precipitate (before EDD) or from Moulakandi/Haribhanga areas with access issues. Muslim community in catchment has some communication gaps.",
+  "Purakhasia PHC":"Moderate burden; Posenggagre HWC sub-area has repeated SBA deliveries. Staff shortages (ANM maternity leave) noted in early weeks.",
+  "Asanang PHC":"Persistent challenge; Anogre SC alone contributes multiple HDs each week it is reported.",
+  "Dalu CHC":"Moderate burden. The Thibapara Megadop HRA area is chronically inaccessible. Some families have no phone, making the CMSMS system ineffective.",
+  "Selsella CHC":"Generally strong performer (100% in many weeks). Occasional HDs from remote sub-centres during monsoon.",
+  "Jeldupara PHC":"Very good performer. Sabilla III village (Jeldupara) has recurring access issue due to missing culvert.",
+  "Keraphara PHC":"Mixed performance; Dajigre and Sisogre villages (inaccessible HRA) account for most HDs. Financial excuse-making is a noted pattern.",
+  "Chibinang PHC":"Mostly strong but Chanangpara SC (Nalsa Mronggre, no bridge) is a persistent hard-to-reach hotspot.",
+  "Pedaldoba PHC":"Small facility; performs well most weeks. Rembi Apal village is a cultural refusal hotspot (preference for Lakhipur PHC, Assam or home delivery).",
+  "Babadam PHC":"Excellent performer — very few home deliveries throughout the period. Small caseload.",
+  "Allagre CHC":"Small caseload but very high HD rate. Upper Mibonpara / Rimrang Asim area is extremely hard to reach (river crossings, no motor road) and has consistent home delivery history.",
+};
+
+// Compute cumulative stats
+const cumHD = {}, cumTot = {};
+FACS.forEach(f=>{cumHD[f]=0;cumTot[f]=0});
+WKS.forEach(w=>{
+  Object.entries(w.fac).forEach(([f,d])=>{
+    if(cumHD[f]!==undefined){cumHD[f]+=d.hd;cumTot[f]+=d.tot}
+  });
+});
+const totalHD = Object.values(cumHD).reduce((a,b)=>a+b,0);
+
+// Chart instances
+let charts = {};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ============================================================
+// NAV
+// ============================================================
+function goTo(id, btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  btn.classList.add('active');
+  initPane(id);
+}
+
+const initialized = {};
+function initPane(id){
+  if(initialized[id]) return;
+  initialized[id]=true;
+  if(id==='overview') initOverview();
+  if(id==='weekly') initWeekly();
+  if(id==='facilities') initFacilities();
+  if(id==='facility-detail') initDetail();
+  if(id==='reasons') initReasons();
+  if(id==='heatmap') initHeatmap();
+}
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+function initOverview(){
+  const labels=WKS.map(w=>w.w);
+  const data=WKS.map(w=>w.pct);
+  charts['ovTrend']=new Chart(document.getElementById('overviewTrendChart'),{
+    type:'line',
+    data:{labels,datasets:[{label:'ID%',data,borderColor:'#1d5c8f',backgroundColor:'rgba(29,92,143,.08)',tension:.4,fill:true,pointRadius:3,pointBackgroundColor:data.map(v=>v===null?'transparent':v>=85?'#2d7a4a':v<75?'#c0392b':'#1d5c8f'),pointBorderColor:'transparent',spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y===null?'No data':c.parsed.y+'%'}}},scales:{x:{ticks:{font:{size:9},maxRotation:55,autoSkip:false,color:'#8a8778'},grid:{display:false}},y:{min:60,max:95,ticks:{callback:v=>v+'%',font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+
+  const facSorted=FACS.slice().sort((a,b)=>cumHD[b]-cumHD[a]);
+  charts['ovFac']=new Chart(document.getElementById('overviewFacChart'),{
+    type:'bar',
+    data:{labels:facSorted.map(f=>f.replace(' PHC','').replace(' CHC','')),datasets:[{label:'Home deliveries',data:facSorted.map(f=>cumHD[f]),backgroundColor:facSorted.map(f=>{const r=cumHD[f]/cumTot[f];return r>0.2?'rgba(192,57,43,.75)':r>0.1?'rgba(184,99,10,.75)':'rgba(29,92,143,.65)';}),borderRadius:3,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} HDs (${Math.round(c.parsed.y/cumTot[facSorted[c.dataIndex]]*100)}% HD rate)`}}},scales:{x:{ticks:{font:{size:9},color:'#8a8778'},grid:{display:false}},y:{ticks:{font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+}
+
+// ============================================================
+// WEEKLY
+// ============================================================
+function initWeekly(){
+  const wData=WKS.filter(w=>w.pct!==null);
+  charts['wkLine']=new Chart(document.getElementById('weeklyLineChart'),{
+    type:'line',
+    data:{
+      labels:WKS.map(w=>w.w),
+      datasets:[
+        {label:'ID%',data:WKS.map(w=>w.pct),borderColor:'#1d5c8f',backgroundColor:'rgba(29,92,143,.07)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:WKS.map(w=>w.pct===null?'transparent':w.pct>=85?'#2d7a4a':w.pct<75?'#c0392b':'#1d5c8f'),spanGaps:true,borderWidth:2},
+        {label:'80% threshold',data:WKS.map(()=>80),borderColor:'rgba(184,99,10,.4)',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.datasetIndex===1?'':c.parsed.y===null?'No data':c.parsed.y+'%'}}},scales:{x:{ticks:{font:{size:9},maxRotation:55,autoSkip:false,color:'#8a8778'},grid:{display:false}},y:{min:60,max:95,ticks:{callback:v=>v+'%',font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+
+  const grid=document.getElementById('wkGrid');
+  grid.innerHTML=WKS.map(w=>{
+    if(w.pct===null) return `<div class="wk-cell" style="opacity:.5"><div class="wk-name">${w.w}</div><div class="wk-pct" style="font-size:14px;color:var(--text3)">No data</div><div class="wk-bar" style="background:var(--border)"></div></div>`;
+    const col=w.pct>=85?'#2d7a4a':w.pct<75?'#c0392b':'#b8630a';
+    return `<div class="wk-cell"><div class="wk-name">${w.w}</div><div class="wk-pct" style="color:${col}">${w.pct}%</div><div class="wk-meta">${w.hd!==null?w.hd+' HDs · '+w.tot+' total':'partial data'}</div><div class="wk-bar" style="background:${col};width:${w.pct}%"></div></div>`;
+  }).join('');
+}
+
+// ============================================================
+// FACILITIES TABLE
+// ============================================================
+function initFacilities(){
+  drawFacTable();
+
+  const sorted=FACS.slice().sort((a,b)=>cumHD[b]-cumHD[a]);
+  charts['facStacked']=new Chart(document.getElementById('facStackedChart'),{
+    type:'bar',
+    data:{
+      labels:sorted.map(f=>f.replace(' PHC','').replace(' CHC','')),
+      datasets:[
+        {label:'Home deliveries',data:sorted.map(f=>cumHD[f]),backgroundColor:'rgba(192,57,43,.75)',borderRadius:{topLeft:3,topRight:3},borderWidth:0},
+        {label:'Institutional',data:sorted.map(f=>cumTot[f]-cumHD[f]),backgroundColor:'rgba(29,92,143,.55)',borderWidth:0}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:10,padding:12}}},scales:{x:{stacked:true,ticks:{font:{size:9},color:'#8a8778'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+}
+
+function drawFacTable(){
+  const type=document.getElementById('facTypeFilter').value;
+  const sort=document.getElementById('facSort').value;
+  let facs=FACS.filter(f=>type==='all'||f.includes(type));
+  facs.sort((a,b)=>{
+    if(sort==='hd-desc') return cumHD[b]-cumHD[a];
+    if(sort==='hd-asc') return cumHD[a]-cumHD[b];
+    if(sort==='rate-asc') return (cumHD[a]/cumTot[a])-(cumHD[b]/cumTot[b]);
+    if(sort==='rate-desc') return (cumHD[b]/cumTot[b])-(cumHD[a]/cumTot[a]);
+    return a.localeCompare(b);
+  });
+  const tbody=document.getElementById('facTableBody');
+  tbody.innerHTML=facs.map(f=>{
+    const hdRate=cumTot[f]?Math.round(cumHD[f]/cumTot[f]*100):0;
+    const idPct=100-hdRate;
+    const share=Math.round(cumHD[f]/totalHD*100);
+    const badgeClass=idPct<75?'badge-red':idPct<88?'badge-amber':'badge-green';
+    const badgeText=idPct<75?'High risk':idPct<88?'Monitor':'Good';
+    return `<tr>
+      <td><div class="fname">${f}</div><div class="ftype">${f.includes('CHC')?'Community Health Centre':'Primary Health Centre'}</div></td>
+      <td style="font-family:'DM Mono',monospace">${cumTot[f]}</td>
+      <td style="font-family:'DM Mono',monospace">${cumHD[f]}</td>
+      <td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${idPct}%;background:${idPct<75?'#c0392b':idPct<88?'#b8630a':'#2d7a4a'}"></div></div><div class="pbar-label" style="color:${idPct<75?'#c0392b':idPct<88?'#b8630a':'#2d7a4a'}">${idPct}%</div></div></td>
+      <td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(share*2.5,100)}%;background:#1d5c8f"></div></div><div class="pbar-label" style="color:#1d5c8f">${share}%</div></div></td>
+      <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// FACILITY DETAIL
+// ============================================================
+function initDetail(){
+  const sel=document.getElementById('detailFacSel');
+  FACS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;sel.appendChild(o)});
+  drawDetail();
+}
+
+let detailWkChart=null, detailRateChart=null;
+function drawDetail(){
+  const f=document.getElementById('detailFacSel').value;
+  const hdRate=cumTot[f]?Math.round(cumHD[f]/cumTot[f]*100):0;
+  const idPct=100-hdRate;
+  const weeksReported=WKS.filter(w=>w.fac[f]).length;
+  const maxWk=WKS.reduce((mx,w)=>w.fac[f]&&w.fac[f].hd>mx.hd?{hd:w.fac[f].hd,w:w.w}:mx,{hd:-1,w:''});
+
+  document.getElementById('detailKPIs').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Total deliveries</div><div class="kpi-value">${cumTot[f]}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Home deliveries</div><div class="kpi-value">${cumHD[f]}</div><div class="kpi-sub">${hdRate}% of deliveries</div></div>
+    <div class="kpi-card"><div class="kpi-label">Inst. delivery rate</div><div class="kpi-value" style="color:${idPct<75?'#c0392b':idPct<88?'#b8630a':'#2d7a4a'}">${idPct}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Weeks reported</div><div class="kpi-value">${weeksReported}</div><div class="kpi-sub">of 25 weeks</div></div>
+    <div class="kpi-card"><div class="kpi-label">Worst week</div><div class="kpi-value">${maxWk.hd}</div><div class="kpi-sub">HDs in ${maxWk.w}</div></div>
+  `;
+
+  const labels=WKS.map(w=>w.w);
+  const hdData=WKS.map(w=>w.fac[f]?w.fac[f].hd:null);
+  const rateData=WKS.map(w=>w.fac[f]&&w.fac[f].tot?Math.round((w.fac[f].tot-w.fac[f].hd)/w.fac[f].tot*100):null);
+
+  destroyChart('dWk'); destroyChart('dRate');
+  charts['dWk']=new Chart(document.getElementById('detailWkChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Home deliveries',data:hdData,backgroundColor:hdData.map(v=>v===null?'transparent':v>5?'rgba(192,57,43,.7)':v>2?'rgba(184,99,10,.7)':'rgba(29,92,143,.6)'),borderRadius:3,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y===null?'No data':c.parsed.y+' HDs'}}},scales:{x:{ticks:{font:{size:8},maxRotation:55,autoSkip:false,color:'#8a8778'},grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+  charts['dRate']=new Chart(document.getElementById('detailRateChart'),{
+    type:'line',
+    data:{labels,datasets:[{label:'ID%',data:rateData,borderColor:'#1d5c8f',backgroundColor:'rgba(29,92,143,.07)',tension:.4,fill:true,pointRadius:3,spanGaps:false,borderWidth:2},{label:'80% line',data:labels.map(()=>80),borderColor:'rgba(184,99,10,.4)',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.datasetIndex===1?'':c.parsed.y===null?'No data':c.parsed.y+'%'}}},scales:{x:{ticks:{font:{size:8},maxRotation:55,autoSkip:false,color:'#8a8778'},grid:{display:false}},y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+
+  const reasons=FAC_REASONS[f]||[];
+  const maxN=reasons[0]?reasons[0].n:1;
+  const colors=['#c0392b','#e67e22','#8e44ad','#2980b9','#16a085'];
+  document.getElementById('detailReasons').innerHTML=reasons.map((r,i)=>`
+    <div class="reason-row">
+      <div class="reason-label">${r.l}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${Math.round(r.n/maxN*100)}%;background:${colors[i]}">${r.n>8?r.n:''}</div></div>
+      <div class="reason-n">${r.n}</div>
+    </div>`).join('');
+
+  const desc=FAC_DESC[f]||'';
+  if(desc){
+    document.getElementById('detailReasons').insertAdjacentHTML('afterend',`<div class="insight-box" style="margin-top:10px">${desc}</div>`);
+  }
+}
+
+// ============================================================
+// REASONS
+// ============================================================
+function initReasons(){
+  const maxN=REASONS[0].n;
+  const tagStyle={
+    'System failure':'background:#faeaea;color:#c0392b',
+    'Demand-side':'background:#fdf3e3;color:#b8630a',
+    'Clinical':'background:#f3eaf8;color:#6c3483',
+    'Infrastructure':'background:#e8f0f8;color:#1d5c8f',
+    'Social':'background:#e8f5ee;color:#1a7c6e',
+  };
+  document.getElementById('reasonsAll').innerHTML=REASONS.map(r=>`
+    <div class="reason-row">
+      <div class="reason-label">${r.label}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${Math.round(r.n/maxN*100)}%;background:${r.color}">${r.n>40?r.n:''}</div></div>
+      <div style="width:90px;flex-shrink:0;text-align:center"><span class="badge" style="${tagStyle[r.tag]||''}">${r.tag}</span></div>
+      <div class="reason-n">${r.n}</div>
+    </div>`).join('');
+
+  const cats={};
+  REASONS.forEach(r=>{cats[r.cat]=(cats[r.cat]||0)+r.n});
+  charts['catDonut']=new Chart(document.getElementById('reasonCatChart'),{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(cats),
+      datasets:[{data:Object.values(cats),backgroundColor:['#c0392b','#e67e22','#8e44ad','#2980b9','#16a085'],borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10,boxWidth:10}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed} mentions (${Math.round(c.parsed/Object.values(cats).reduce((a,b)=>a+b,0)*100)}%)`}}}}
+  });
+
+  document.getElementById('reasonInterventions').innerHTML=`
+    <div style="font-size:12px;line-height:1.6">
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong style="color:#c0392b">System failures (206 mentions)</strong><br>Strengthen the ASHA–mother communication contract. Mandate "labour alert" registration before EDD — mothers confirm a contact who will call when labour begins. Review ASHA strike impact months.</div>
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong style="color:#b8630a">Demand-side (257 mentions)</strong><br>Target chronic refusal villages with block rescue missions and VHC community dialogue. Engage male family members (husbands, fathers) directly — they block more deliveries than mothers refuse.</div>
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong style="color:#6c3483">Clinical / precipitate (168 mentions)</strong><br>Promote early transit home admission for multigravida and HRA mothers. Preterm deliveries need anticipatory guidance in the 3rd trimester — mothers should know ANY pain = call ASHA.</div>
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong style="color:#1d5c8f">Infrastructure (172 mentions)</strong><br>Map HRA villages and install VSAT/mobile boosters in network dead-zones. Prioritise culvert/bridge repairs for top-5 recurring inaccessible villages. Expand CMSMS pre-positioning.</div>
+      <div style="padding:8px 0"><strong style="color:#1a7c6e">Social (107 mentions)</strong><br>Address "no escort" gap — formalize community escort networks through SHGs/VHCs. Include childcare during delivery in CMSMS/transit home support packages.</div>
+    </div>`;
+
+  const sel=document.getElementById('reasonFacSel');
+  FACS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;sel.appendChild(o)});
+  drawFacReasons();
+}
+
+function drawFacReasons(){
+  const f=document.getElementById('reasonFacSel').value;
+  const data=FAC_REASONS[f]||[];
+  const maxN=data[0]?data[0].n:1;
+  const colors=['#c0392b','#e67e22','#8e44ad','#2980b9','#16a085'];
+  document.getElementById('facReasonChart').innerHTML=data.map((r,i)=>`
+    <div class="reason-row">
+      <div class="reason-label">${r.l}</div>
+      <div class="reason-track"><div class="reason-fill" style="width:${Math.round(r.n/maxN*100)}%;background:${colors[i]}">${r.n>8?r.n:''}</div></div>
+      <div class="reason-n">${r.n}</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// HEATMAP
+// ============================================================
+function initHeatmap(){
+  const dataWks=WKS.filter(w=>Object.keys(w.fac).length>0||w.hd!==null);
+  // Find max HD for colour scale
+  let maxVal=0;
+  FACS.forEach(f=>WKS.forEach(w=>{if(w.fac[f])maxVal=Math.max(maxVal,w.fac[f].hd)}));
+
+  function heatColor(v){
+    if(v===null) return '#f5f4f0';
+    if(v===0) return '#e8f5ee';
+    const ratio=v/maxVal;
+    if(ratio<0.2) return '#a8d9be';
+    if(ratio<0.4) return '#f5c842';
+    if(ratio<0.65) return '#e88b2a';
+    return '#c0392b';
+  }
+
+  const thStyle='font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8a8778;padding:4px 6px;white-space:nowrap;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid #e2e0d8;';
+  const tdStyle='padding:4px 2px;text-align:center;font-size:11px;font-family:"DM Mono",monospace;';
+
+  let html=`<table style="border-collapse:collapse;min-width:100%">
+    <thead><tr><th style="${thStyle}text-align:left;min-width:140px;position:sticky;left:0;background:#fff;z-index:3">Facility</th>
+    ${WKS.map(w=>`<th style="${thStyle}min-width:60px">${w.w}</th>`).join('')}
+    <th style="${thStyle}min-width:50px;color:#1d5c8f">Total</th></tr></thead><tbody>`;
+
+  FACS.forEach(f=>{
+    const rowHD=WKS.map(w=>w.fac[f]?w.fac[f].hd:null);
+    html+=`<tr>
+      <td style="padding:4px 8px;font-size:12px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#fff;border-right:1px solid #e2e0d8">${f}</td>
+      ${WKS.map((w,i)=>{
+        const v=rowHD[i];
+        const bg=heatColor(v);
+        const textCol=v>5?'#fff':v===null?'#ccc':'#333';
+        return `<td style="${tdStyle}background:${bg};color:${textCol};border-radius:3px">${v===null?'—':v}</td>`;
+      }).join('')}
+      <td style="${tdStyle}font-weight:600;color:#1d5c8f">${cumHD[f]}</td>
+    </tr>`;
+  });
+
+  html+=`<tr style="background:#f5f4f0">
+    <td style="padding:4px 8px;font-size:11px;font-weight:600;position:sticky;left:0;background:#f5f4f0">District total</td>
+    ${WKS.map(w=>`<td style="${tdStyle}font-weight:600">${w.hd!==null?w.hd:'—'}</td>`).join('')}
+    <td style="${tdStyle}font-weight:600;color:#c0392b">${totalHD}</td>
+  </tr></tbody></table>`;
+
+  document.getElementById('heatmapContainer').innerHTML=html;
+}
+
+// Init overview on load
+initPane('overview');
+</script>
+</body>
+</html>

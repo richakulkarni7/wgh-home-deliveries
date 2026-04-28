@@ -227,9 +227,13 @@ select{font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 10px;border:1
         <div class="kpi-card"><div class="kpi-label">Total deliveries</div><div class="kpi-value">3,898</div><div class="kpi-sub">Jul 2025 – Mar 2026</div></div>
         <div class="kpi-card"><div class="kpi-label">Home deliveries</div><div class="kpi-value">710</div><div class="kpi-sub">18.2% of all deliveries</div></div>
         <div class="kpi-card"><div class="kpi-label">Avg. inst. %</div><div class="kpi-value">81.8%</div><div class="kpi-sub">District weekly average</div></div>
-        <div class="kpi-card"><div class="kpi-label">Best week</div><div class="kpi-value">87%</div><div class="kpi-sub">8–14 Dec & 26 Jan–1 Feb</div></div>
-        <div class="kpi-card"><div class="kpi-label">Worst week</div><div class="kpi-value">69%</div><div class="kpi-sub">14–20 Jul 2025</div></div>
+
         <div class="kpi-card"><div class="kpi-label">Facilities</div><div class="kpi-value">15</div><div class="kpi-sub">PHCs &amp; CHCs</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Home birth rate by facility</div>
+        <div class="card-sub">% of deliveries that were home births, all 26 weeks</div>
+        <div class="chart-wrap ch200"><canvas id="overviewFacRateChart" role="img" aria-label="Home birth rate by facility"></canvas></div>
       </div>
       <div class="grid-2">
         <div class="card">
@@ -601,6 +605,13 @@ function initOverview(){
     type:'line',
     data:{labels,datasets:[{label:'ID%',data,borderColor:'#1d5c8f',backgroundColor:'rgba(29,92,143,.08)',tension:.4,fill:true,pointRadius:3,pointBackgroundColor:data.map(v=>v===null?'transparent':v>=85?'#2d7a4a':v<75?'#c0392b':'#1d5c8f'),pointBorderColor:'transparent',spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y===null?'No data':c.parsed.y+'%'}}},scales:{x:{ticks:{font:{size:9},maxRotation:55,autoSkip:false,color:'#8a8778'},grid:{display:false}},y:{min:60,max:95,ticks:{callback:v=>v+'%',font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
+  });
+
+  const facByRate=FACS.slice().sort((a,b)=>(cumHD[b]/cumTot[b])-(cumHD[a]/cumTot[a]));
+  charts['ovFacRate']=new Chart(document.getElementById('overviewFacRateChart'),{
+    type:'bar',
+    data:{labels:facByRate.map(f=>f.replace(' PHC','').replace(' CHC','')),datasets:[{label:'Home birth rate',data:facByRate.map(f=>cumTot[f]?Math.round(cumHD[f]/cumTot[f]*100):0),backgroundColor:facByRate.map(f=>{const r=cumHD[f]/cumTot[f];return r>0.2?'rgba(192,57,43,.75)':r>0.1?'rgba(184,99,10,.75)':'rgba(29,92,143,.65)';}),borderRadius:3,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y}% home birth rate`}}},scales:{x:{ticks:{font:{size:9},color:'#8a8778'},grid:{display:false}},y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#8a8778'},grid:{color:'rgba(0,0,0,.05)'}}}}
   });
 
   const facSorted=FACS.slice().sort((a,b)=>cumHD[b]-cumHD[a]);

@@ -1275,7 +1275,7 @@ selectReason = function(idx, btn){
 // ============================================================
 // REASON BARS — mobile stacked layout
 // ============================================================
-function renderReasonBars(containerId, data, maxN, showTag){
+function renderReasonBars(containerId, data, maxN, showTag, total){
   const tagStyle={
     'System failure':'background:#faeaea;color:#c0392b',
     'Demand-side':'background:#fdf3e3;color:#b8630a',
@@ -1289,7 +1289,7 @@ function renderReasonBars(containerId, data, maxN, showTag){
         <div class="rsn-label">${r.label||r.l}</div>
         <div class="rsn-right">
           ${showTag&&r.tag?`<span class="rsn-tag" style="${tagStyle[r.tag]||''}">${r.tag}</span>`:''}
-          <span class="rsn-n">${r.n}</span>
+          <span class="rsn-n">${r.n}${total?` <span style="color:var(--text3);font-size:11px">(${Math.round(r.n/total*100)}%)</span>`:''}</span>
         </div>
       </div>
       <div class="rsn-track"><div class="rsn-fill" style="width:${Math.round(r.n/maxN*100)}%;background:${r.color||'#1d5c8f'}">${r.n>40?r.n:''}</div></div>
@@ -1312,7 +1312,7 @@ drawFacReasons = function(){
   const maxN = data[0]?data[0].n:1;
   const colors=['#c0392b','#e67e22','#8e44ad','#2980b9','#16a085'];
   const mapped = data.map((r,i)=>({...r,label:r.l,color:colors[i]}));
-  renderReasonBars('facReasonChart', mapped, maxN, false);
+  renderReasonBars('facReasonChart', mapped, maxN, false, cumHD[f]);
 };
 
 // Override detailReasons renderer
